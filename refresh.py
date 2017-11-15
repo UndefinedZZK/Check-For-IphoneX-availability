@@ -2,6 +2,7 @@ import sched, time, logging, requests
 import os
 colorToPartNumber = {'white': 'MQAG2B/A', 'black': 'MQAF2B/A'}
 yourAddress = 'WC1E 6BT'
+slackWebhookURL = ''
 
 def getAddressForURL():
 	return yourAddress.replace(' ', '%20')
@@ -12,17 +13,19 @@ def notify(title, subtitle, message):
     m = '-message {!r}'.format(message)
     os.system('terminal-notifier {}'.format(' '.join([m, t, s])))
 
-def checkPickupInStoreList(storeList, color):	
+def checkPickupInStoreList(storeList, color):
     for store in storeList:
-    	pickupSituationForStores = store['partsAvailability'][colorToPartNumber[color]]['storePickupQuote']
-    	print ' '.join([time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), 'iPhone 256G with color', color, pickupSituationForStores])
-    	pickupSituationAbbreviation = store['partsAvailability'][colorToPartNumber[color]]['pickupSearchQuote']
-    	if (pickupSituationAbbreviation != 'Currently unavailable'):
-    		notifyMessage = str(' '.join(['Iphone X with color', color, pickupSituationForStores]))
-    		notify('Buy your ipx now!!!', 'From Python script created by UndefinedZZK', notifyMessage)
-    		return
+        pickupSituationForStores = store['partsAvailability'][colorToPartNumber[color]]['storePickupQuote']
+        print ' '.join([time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), 'iPhone 256G with color', color, pickupSituationForStores])
+        pickupSituationAbbreviation = store['partsAvailability'][colorToPartNumber[color]]['pickupSearchQuote']
+        if (pickupSituationAbbreviation == 'Currently unavailable'):
+            notifyMessage = str(' '.join(['Iphone X with color', color, pickupSituationForStores]))
+            slack_incoming_webhooks = '''curl -X POST -H 'Content-type: application/json' --data '{"text": "%s"}'  %s''' % (notifyMessage, slackWebhookURL)
+            os.system(slack_incoming_webhooks)
+            # notify('Buy your ipx now!!!', 'From Python script created by UndefinedZZK', notifyMessage)
+            return
 
-def scheduleCheckPerSeconds(scheduler, interval): 
+def scheduleCheckPerSeconds(scheduler, interval):
 	requestURLforWhite = ''.join(['https://www.apple.com/uk/shop/retail/pickup-message?pl=true&parts.0=', colorToPartNumber['white'], '&location=', getAddressForURL()])
 	requestURLforBlack = ''.join(['https://www.apple.com/uk/shop/retail/pickup-message?pl=true&parts.0=', colorToPartNumber['black'], '&location=', getAddressForURL()])
 	storeListforWhite = requests.get(requestURLforWhite).json()['body']['stores']
